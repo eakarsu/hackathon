@@ -1,0 +1,163 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Store Intelligence Platform - Architecture Diagram</title>
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            margin: 0;
+            padding: 20px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+        }
+        .container {
+            background: white;
+            border-radius: 20px;
+            padding: 40px;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+            max-width: 1200px;
+        }
+        h1 {
+            text-align: center;
+            color: #333;
+            margin-bottom: 40px;
+            font-size: 28px;
+        }
+        svg {
+            width: 100%;
+            height: auto;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>Store Intelligence Platform - System Architecture</h1>
+        <svg viewBox="0 0 1000 700" xmlns="http://www.w3.org/2000/svg">
+            <!-- Background layers -->
+            <rect x="20" y="50" width="960" height="180" rx="10" fill="#f0f4ff" stroke="#667eea" stroke-width="2"/>
+            <text x="40" y="80" font-family="Arial" font-size="18" font-weight="bold" fill="#667eea">Frontend Layer (React.js)</text>
+            
+            <rect x="20" y="260" width="960" height="200" rx="10" fill="#fff8f0" stroke="#ff9800" stroke-width="2"/>
+            <text x="40" y="290" font-family="Arial" font-size="18" font-weight="bold" fill="#ff9800">Backend Layer (Flask API - Port 5001)</text>
+            
+            <rect x="20" y="490" width="960" height="180" rx="10" fill="#f0fff4" stroke="#4caf50" stroke-width="2"/>
+            <text x="40" y="520" font-family="Arial" font-size="18" font-weight="bold" fill="#4caf50">Data & AI Layer</text>
+            
+            <!-- Frontend Components -->
+            <rect x="60" y="100" width="200" height="100" rx="8" fill="white" stroke="#667eea" stroke-width="2"/>
+            <text x="160" y="135" font-family="Arial" font-size="14" text-anchor="middle" font-weight="bold">Chat Interface</text>
+            <text x="160" y="155" font-family="Arial" font-size="12" text-anchor="middle" fill="#666">Natural Language</text>
+            <text x="160" y="170" font-family="Arial" font-size="12" text-anchor="middle" fill="#666">Queries</text>
+            
+            <rect x="290" y="100" width="200" height="100" rx="8" fill="white" stroke="#667eea" stroke-width="2"/>
+            <text x="390" y="135" font-family="Arial" font-size="14" text-anchor="middle" font-weight="bold">Actionable Items</text>
+            <text x="390" y="155" font-family="Arial" font-size="12" text-anchor="middle" fill="#666">Task Management</text>
+            <text x="390" y="170" font-family="Arial" font-size="12" text-anchor="middle" fill="#666">Execution Tracking</text>
+            
+            <rect x="520" y="100" width="200" height="100" rx="8" fill="white" stroke="#667eea" stroke-width="2"/>
+            <text x="620" y="135" font-family="Arial" font-size="14" text-anchor="middle" font-weight="bold">Analytics Dashboard</text>
+            <text x="620" y="155" font-family="Arial" font-size="12" text-anchor="middle" fill="#666">Performance Metrics</text>
+            <text x="620" y="170" font-family="Arial" font-size="12" text-anchor="middle" fill="#666">Real-time Insights</text>
+            
+            <rect x="750" y="100" width="200" height="100" rx="8" fill="white" stroke="#667eea" stroke-width="2"/>
+            <text x="850" y="135" font-family="Arial" font-size="14" text-anchor="middle" font-weight="bold">Task Progression</text>
+            <text x="850" y="155" font-family="Arial" font-size="12" text-anchor="middle" fill="#666">Next Task</text>
+            <text x="850" y="170" font-family="Arial" font-size="12" text-anchor="middle" fill="#666">Recommendations</text>
+            
+            <!-- Backend Components -->
+            <rect x="60" y="310" width="180" height="120" rx="8" fill="white" stroke="#ff9800" stroke-width="2"/>
+            <text x="150" y="345" font-family="Arial" font-size="14" text-anchor="middle" font-weight="bold">RAG Service</text>
+            <text x="150" y="365" font-family="Arial" font-size="11" text-anchor="middle" fill="#666">• Initialize</text>
+            <text x="150" y="380" font-family="Arial" font-size="11" text-anchor="middle" fill="#666">• Index Data</text>
+            <text x="150" y="395" font-family="Arial" font-size="11" text-anchor="middle" fill="#666">• Search</text>
+            <text x="150" y="410" font-family="Arial" font-size="11" text-anchor="middle" fill="#666">• Execute Tasks</text>
+            
+            <rect x="270" y="310" width="180" height="120" rx="8" fill="white" stroke="#ff9800" stroke-width="2"/>
+            <text x="360" y="345" font-family="Arial" font-size="14" text-anchor="middle" font-weight="bold">API Endpoints</text>
+            <text x="360" y="365" font-family="Arial" font-size="11" text-anchor="middle" fill="#666">• /api/chat</text>
+            <text x="360" y="380" font-family="Arial" font-size="11" text-anchor="middle" fill="#666">• /api/actionable-items</text>
+            <text x="360" y="395" font-family="Arial" font-size="11" text-anchor="middle" fill="#666">• /api/analytics</text>
+            <text x="360" y="410" font-family="Arial" font-size="11" text-anchor="middle" fill="#666">• /api/execute</text>
+            
+            <rect x="480" y="310" width="180" height="120" rx="8" fill="white" stroke="#ff9800" stroke-width="2"/>
+            <text x="570" y="345" font-family="Arial" font-size="14" text-anchor="middle" font-weight="bold">Task Processor</text>
+            <text x="570" y="365" font-family="Arial" font-size="11" text-anchor="middle" fill="#666">• Priority Analysis</text>
+            <text x="570" y="380" font-family="Arial" font-size="11" text-anchor="middle" fill="#666">• Time Estimation</text>
+            <text x="570" y="395" font-family="Arial" font-size="11" text-anchor="middle" fill="#666">• Impact Rating</text>
+            <text x="570" y="410" font-family="Arial" font-size="11" text-anchor="middle" fill="#666">• Performance Tracking</text>
+            
+            <rect x="690" y="310" width="180" height="120" rx="8" fill="white" stroke="#ff9800" stroke-width="2"/>
+            <text x="780" y="345" font-family="Arial" font-size="14" text-anchor="middle" font-weight="bold">Analytics Engine</text>
+            <text x="780" y="365" font-family="Arial" font-size="11" text-anchor="middle" fill="#666">• Completion Metrics</text>
+            <text x="780" y="380" font-family="Arial" font-size="11" text-anchor="middle" fill="#666">• Efficiency Scores</text>
+            <text x="780" y="395" font-family="Arial" font-size="11" text-anchor="middle" fill="#666">• Productivity Calc</text>
+            <text x="780" y="410" font-family="Arial" font-size="11" text-anchor="middle" fill="#666">• Insights Generation</text>
+            
+            <!-- Data & AI Layer -->
+            <rect x="60" y="540" width="200" height="100" rx="8" fill="white" stroke="#4caf50" stroke-width="2"/>
+            <text x="160" y="575" font-family="Arial" font-size="14" text-anchor="middle" font-weight="bold">ChromaDB</text>
+            <text x="160" y="595" font-family="Arial" font-size="12" text-anchor="middle" fill="#666">Vector Store</text>
+            <text x="160" y="610" font-family="Arial" font-size="12" text-anchor="middle" fill="#666">Embeddings</text>
+            
+            <rect x="290" y="540" width="200" height="100" rx="8" fill="white" stroke="#4caf50" stroke-width="2"/>
+            <text x="390" y="575" font-family="Arial" font-size="14" text-anchor="middle" font-weight="bold">AI Client (GPT-4)</text>
+            <text x="390" y="595" font-family="Arial" font-size="12" text-anchor="middle" fill="#666">OAuth Authentication</text>
+            <text x="390" y="610" font-family="Arial" font-size="12" text-anchor="middle" fill="#666">Answer Generation</text>
+            
+            <rect x="520" y="540" width="200" height="100" rx="8" fill="white" stroke="#4caf50" stroke-width="2"/>
+            <text x="620" y="575" font-family="Arial" font-size="14" text-anchor="middle" font-weight="bold">Data Sources</text>
+            <text x="620" y="595" font-family="Arial" font-size="12" text-anchor="middle" fill="#666">Lead Data (JSON)</text>
+            <text x="620" y="610" font-family="Arial" font-size="12" text-anchor="middle" fill="#666">Business Rules (TXT)</text>
+            
+            <rect x="750" y="540" width="200" height="100" rx="8" fill="white" stroke="#4caf50" stroke-width="2"/>
+            <text x="850" y="575" font-family="Arial" font-size="14" text-anchor="middle" font-weight="bold">SentenceTransformers</text>
+            <text x="850" y="595" font-family="Arial" font-size="12" text-anchor="middle" fill="#666">all-MiniLM-L6-v2</text>
+            <text x="850" y="610" font-family="Arial" font-size="12" text-anchor="middle" fill="#666">Embedding Model</text>
+            
+            <!-- Arrows showing data flow -->
+            <!-- Frontend to Backend -->
+            <path d="M 160 200 L 160 310" stroke="#999" stroke-width="2" fill="none" marker-end="url(#arrowhead)"/>
+            <path d="M 390 200 L 360 310" stroke="#999" stroke-width="2" fill="none" marker-end="url(#arrowhead)"/>
+            <path d="M 620 200 L 780 310" stroke="#999" stroke-width="2" fill="none" marker-end="url(#arrowhead)"/>
+            <path d="M 850 200 L 570 310" stroke="#999" stroke-width="2" fill="none" marker-end="url(#arrowhead)"/>
+            
+            <!-- Backend to Data Layer -->
+            <path d="M 150 430 L 160 540" stroke="#999" stroke-width="2" fill="none" marker-end="url(#arrowhead)"/>
+            <path d="M 150 430 L 390 540" stroke="#999" stroke-width="2" fill="none" marker-end="url(#arrowhead)"/>
+            <path d="M 570 430 L 620 540" stroke="#999" stroke-width="2" fill="none" marker-end="url(#arrowhead)"/>
+            <path d="M 780 430 L 850 540" stroke="#999" stroke-width="2" fill="none" marker-end="url(#arrowhead)"/>
+            
+            <!-- Arrow marker definition -->
+            <defs>
+                <marker id="arrowhead" markerWidth="10" markerHeight="10" refX="9" refY="3" orient="auto">
+                    <polygon points="0 0, 10 3, 0 6" fill="#999"/>
+                </marker>
+            </defs>
+            
+            <!-- SSL Badge -->
+            <rect x="880" y="310" width="80" height="30" rx="5" fill="#ffd700" stroke="#ff9800"/>
+            <text x="920" y="330" font-family="Arial" font-size="11" text-anchor="middle" font-weight="bold">SSL Bypass</text>
+            
+            <!-- CORS Badge -->
+            <rect x="880" y="350" width="80" height="30" rx="5" fill="#87ceeb" stroke="#ff9800"/>
+            <text x="920" y="370" font-family="Arial" font-size="11" text-anchor="middle" font-weight="bold">CORS *</text>
+        </svg>
+        
+        <div style="margin-top: 30px; padding: 20px; background: #f9f9f9; border-radius: 10px;">
+            <h3 style="color: #333; margin-bottom: 15px;">Key Features:</h3>
+            <ul style="color: #666; line-height: 1.8;">
+                <li><strong>Real-time Processing:</strong> Axios HTTP requests between React frontend and Flask backend</li>
+                <li><strong>RAG System:</strong> Combines vector search with AI generation for context-aware responses</li>
+                <li><strong>Task Workflow:</strong> Execute → Track → Analyze → Recommend cycle</li>
+                <li><strong>Performance Metrics:</strong> Time tracking, efficiency scores, productivity analytics</li>
+                <li><strong>Data Persistence:</strong> ChromaDB stores embeddings for fast semantic search</li>
+            </ul>
+        </div>
+    </div>
+</body>
+</html>

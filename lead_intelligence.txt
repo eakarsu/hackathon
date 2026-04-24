@@ -1,0 +1,100 @@
+AI Agent Requirements Document ¿ ¿Lead Intelligence¿ for Store-Level Leads
+1. Purpose & Scope
+* Agent Name: Lead Intelligence
+
+* Goal: Read the input Excel (lead_management.lead_new_0817_Deleted_Test.xlsx) and generate actionable, human?readable insights for each assigned associate.
+
+* Output Cadence: Daily (runtime, on-demand possible).
+
+* Core Outcomes:
+o Recommend DUE tasks (today¿s focus).
+
+o Warn on OVERDUE tasks (urgent remediation).
+
+o Appreciate recent SOLD wins in the last 7 days.
+
+2. Data Inputs & Assumptions
+* Input: lead_management.lead_new_0817_Deleted_Test.xlsx
+
+* Sheet: lead_management.lead_new_0817
+
+* Key Fields:
+o _id (lead ID)
+o assignedAssociate.associateName
+o leadStatus (NEW, QUALIFIED, QUOTED, SOLD, UNQUALIFIED, ¿)
+o CreatedDATEONLY
+o followUpDate
+o schedule.appointmentDate
+o store.storeNumber, store.storeName
+* Dates: Treated as calendar dates (ignore times).
+
+* Nulls: Missing followUpDate / appointmentDate = not satisfying future conditions, may qualify as OVERDUE.
+
+3. Configurable Variables
+* TABLE1_START = 2025-08-09
+
+* TABLE1_END = 2025-08-15
+
+* TABLE2_START = 2025-06-11
+
+* TABLE2_END = 2025-08-15
+
+* NEW_CUTOFF = 2025-08-13
+
+* DUE_CUTOFF = 2025-08-15
+
+* TODAY = runtime system date (America/New_York)
+
+* RECENT_SALES_WINDOW_DAYS = 7
+
+4. Core Definitions
+Open Leads: NEW, QUALIFIED, QUOTED.
+Partition Rule: DUE + OVERDUE = Open Leads (mutually exclusive).
+DUE
+* NEW and CreatedDATEONLY > NEW_CUTOFF
+* QUALIFIED/QUOTED and (followUpDate > DUE_CUTOFF OR appointmentDate > DUE_CUTOFF)
+OVERDUE
+* NEW and CreatedDATEONLY <= NEW_CUTOFF
+* QUALIFIED/QUOTED and (followUpDate <= DUE_CUTOFF OR IS NULL) AND (appointmentDate <= DUE_CUTOFF OR IS NULL)
+
+5. Lead Intelligence Generation
+For each associate: - Count of Open, DUE, OVERDUE leads. - List of DUE tasks. - List of OVERDUE tasks. - Recognition for SOLD in last 7 days.
+Prioritization
+1. OVERDUE ? oldest first.
+2. DUE ? nearest upcoming task first.
+3. Appreciation ? SOLD leads in last 7 days.
+Messaging
+* Tone: clear, supportive, action?oriented.
+* Appreciation: Congratulate SOLD wins.
+* OVERDUE: Warn explicitly.
+* DUE: Recommend next action.
+
+6. Action Catalog
+A. Qualify Customer
+* Condition: NEW
+* Action: Call and book appointment.
+* Context: Created date, appointment status.
+B. Create Quote
+* Condition: QUOTED with future appointment.
+* Action: Prepare quote before appointment.
+* Context: Appointment date.
+C. Close the Sale
+* Condition: QUOTED without appointment or past appointment.
+* Action: Call customer to confirm and close.
+* Context: Follow?up or appointment dates.
+
+7. Output Format
+Example: Per Associate Summary
+Associate: Jordan Smith
+Store(s): 408, 489
+Summary:
+- Open Leads: 11 | DUE: 6 | OVERDUE: 5
+- Wins: Great job! 2 SOLD in last 7 days (#154882, #154991).
+OVERDUE ¿ act now
+- #1267512 (NEW) ¿ created 08/12; no appointment ? Call to qualify.
+- #1548587 (QUOTED) ¿ no follow?up/appointment ? Call customer to confirm.
+DUE ¿ do today
+- #1549900 (NEW) ¿ created 08/14 ? Call to qualify.
+- #1549912 (QUOTED) ¿ appointment 08/19 ? Prepare quote.
+
+
