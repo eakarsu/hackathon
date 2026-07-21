@@ -1,13 +1,8 @@
 """Configuration management for RAG application"""
 
 import os
-import ssl
 from dataclasses import dataclass
 from typing import Optional
-
-import requests
-from requests.packages.urllib3.exceptions import InsecureRequestWarning
-
 
 @dataclass
 class Config:
@@ -27,8 +22,7 @@ class Config:
     @classmethod
     def from_args(cls, args):
         """Create config from command line arguments"""
-        # Setup SSL disabling
-        cls._setup_ssl_disabling()
+        os.environ['ANONYMIZED_TELEMETRY'] = 'FALSE'
         
         return cls(
             csv_path=args.csv,
@@ -44,12 +38,3 @@ class Config:
             output_path=args.output
         )
     
-    @staticmethod
-    def _setup_ssl_disabling():
-        """Configure SSL disabling for development"""
-        ssl._create_default_https_context = ssl._create_unverified_context
-        requests.packages.urllib3.disable_warnings(InsecureRequestWarning)
-        os.environ['ANONYMIZED_TELEMETRY'] = 'FALSE'
-        print("SSL certificate verification disabled")
-
-

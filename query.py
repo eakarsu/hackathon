@@ -3,16 +3,12 @@
 import argparse
 import logging
 import os
-import ssl
 import json
 from typing import List
 
-# SSL disabling (EXACT same as your working version)
-ssl._create_default_https_context = ssl._create_unverified_context
 os.environ['ANONYMIZED_TELEMETRY'] = 'FALSE'
 
 import requests
-requests.packages.urllib3.disable_warnings()
 
 import chromadb
 from chromadb.config import Settings
@@ -30,7 +26,13 @@ def get_access_token(client_id, client_secret, token_url):
         'client_secret': client_secret,
         'grant_type': 'client_credentials'
     }
-    response = requests.post(token_url, headers=headers, data=payload, verify=False)
+    response = requests.post(
+        token_url,
+        headers=headers,
+        data=payload,
+        verify=os.getenv("AI_CA_BUNDLE") or True,
+        timeout=20,
+    )
     response.raise_for_status()
     return response.json()["access_token"]
 
@@ -49,7 +51,13 @@ def call_ai_api(messages, token, chat_url, model):
         "stream": False
     }
     
-    response = requests.post(chat_url, headers=headers, json=payload, verify=False)
+    response = requests.post(
+        chat_url,
+        headers=headers,
+        json=payload,
+        verify=os.getenv("AI_CA_BUNDLE") or True,
+        timeout=60,
+    )
     response.raise_for_status()
     return response.json()
 
@@ -84,23 +92,12 @@ def read_and_rephrase_rules(rules_file, token, chat_url, model):
     Focus on the business logic and actions, not the data source details."""
         }
     ]
-    # Debug: Show what we're sending to AI for rephrasing
-    print("\n" + "="*80)
-    print("🔍 DEBUG: REPHRASING RULES WITH AI")
-    print("="*80)
-    print(f"Original rules length: {len(original_rules)} characters")
-    print("Sending to AI for rephrasing...")
-    print("="*80)
-    
     try:
         response = call_ai_api(rephrase_messages, token, chat_url, model)
         
         if 'choices' in response and response['choices']:
             rephrased_rules = response['choices'][0]['message']['content']
             logger.info(f"✅ Rules rephrased: {len(rephrased_rules)} characters")
-            
-            print(f"Rephrased rules length: {len(rephrased_rules)} characters")
-            print("="*80)
             
             return rephrased_rules
         else:
@@ -164,18 +161,6 @@ Question: {question}
 Please answer based on the data context above, following the business guidelines."""
         }
     ]
-    
-    # Debug: Print what we're sending to AI
-    print("\n" + "="*80)
-    print("🔍 DEBUG: FINAL AI CALL WITH CHROMADB + REPHRASED RULES")
-    print("="*80)
-    print("SYSTEM MESSAGE (Rephrased Rules):")
-    print("-" * 40)
-    print(messages[0]['content'][:500] + "...")
-    print("\nUSER MESSAGE (ChromaDB Context):")
-    print("-" * 40)
-    print(messages[1]['content'][:500] + "...")
-    print("="*80)
     
     # Call AI API
     return call_ai_api(messages, token, chat_url, model)

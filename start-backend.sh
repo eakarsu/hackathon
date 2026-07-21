@@ -1,18 +1,12 @@
-#!/bin/bash
+#!/usr/bin/env bash
+set -euo pipefail
 
-echo "🔧 Starting Flask Backend Server..."
-echo "📂 Working directory: $(pwd)"
+cd "$(dirname "$0")/backend"
 
-# Kill any existing Flask processes on port 5001
-echo "🚫 Killing any existing processes on port 5001..."
-lsof -ti :5001 | xargs kill -9 2>/dev/null || true
-
-# Change to backend directory if it exists, otherwise stay in current directory
-if [ -d "backend" ]; then
-    cd backend
-    echo "📁 Changed to backend directory"
+port="${PORT:-5001}"
+if command -v lsof >/dev/null 2>&1 && lsof -tiTCP:"$port" -sTCP:LISTEN >/dev/null 2>&1; then
+  echo "Port ${port} is already in use; stop that process explicitly or choose PORT." >&2
+  exit 1
 fi
 
-# Start the Flask server
-echo "🚀 Starting Flask server on port 5001..."
-python app.py
+exec python app.py

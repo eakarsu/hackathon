@@ -1,1 +1,28 @@
-python query.py --query "I am employee of store number 6338. give me actinable tasks for store number 6338. which lead items shall I work first, give detailed answer?" --rules lead_intelligence.txt --persist-dir ./chromadb_store --collection-name json_data_store  --token-url "https://apis-b2b-stage.lowes.com/v1/oauthprovider/oauth2/token" --chat-url "https://apis-b2b-stage.lowes.com/v1/chat/completions" --client-id 5f218d4cf51460009a432438b2ba70b5 --client-secret 2309d9fa6f965a88c30dd809619f30c1
+#!/usr/bin/env bash
+set -euo pipefail
+
+cd "$(dirname "$0")"
+if [[ -f .env ]]; then
+  set -a
+  # shellcheck disable=SC1091
+  source .env
+  set +a
+fi
+
+required=(AI_CLIENT_ID AI_CLIENT_SECRET AI_TOKEN_URL AI_CHAT_URL)
+for name in "${required[@]}"; do
+  if [[ -z "${!name:-}" ]]; then
+    echo "Missing required configuration: ${name}" >&2
+    exit 1
+  fi
+done
+
+exec python query.py \
+  --question "${QUESTION:-What actions should the store team prioritize?}" \
+  --token-url "$AI_TOKEN_URL" \
+  --chat-url "$AI_CHAT_URL" \
+  --client-id "$AI_CLIENT_ID" \
+  --client-secret "$AI_CLIENT_SECRET" \
+  --model "${AI_MODEL:-gpt-4o}" \
+  --rules "${RULES_PATH:-lead_intelligence.txt}" \
+  --top-k "${TOP_K:-50}"

@@ -1,6 +1,7 @@
 """AI API client for OAuth and chat completions"""
 
 import logging
+import os
 from typing import List, Dict, Any
 
 import requests
@@ -14,6 +15,7 @@ class AIClient:
     def __init__(self, config):
         self.config = config
         self.token = None
+        self.verify = os.getenv("AI_CA_BUNDLE") or True
         self._authenticate()
     
     def _authenticate(self):
@@ -32,7 +34,8 @@ class AIClient:
                 self.config.token_url,
                 headers=headers,
                 data=payload,
-                verify=False
+                verify=self.verify,
+                timeout=20,
             )
             response.raise_for_status()
             self.token = response.json()["access_token"]
@@ -55,16 +58,17 @@ class AIClient:
             "messages": messages,
             "stream": False
         }
-        logger.info(f"Calling AI API wth messages: {messages}")
+        logger.info("Calling AI API with %d messages", len(messages))
         try:
             response = requests.post(
                 self.config.chat_url,
                 headers=headers,
                 json=payload,
-                verify=False
+                verify=self.verify,
+                timeout=60,
             )
             response.raise_for_status()
-            logger.info(f"AI API response received: {response.json()}")
+            logger.info("AI API response received")
             return response.json()
         
         except Exception as e:
@@ -109,22 +113,4 @@ class AIClient:
             return response['choices'][0]['message']['content']
         else:
             raise Exception("No valid AI response received")
-
-    def _debug_prompt(self, messages: List[Dict[str, str]]):
-        """Print debug information about the prompt"""
-        print("\n" + "="*80)
-        print("🔍 DEBUG: AI PROMPT")
-        print("="*80)
-        
-        for i, msg in enumerate(messages):
-            role = msg['role'].upper()
-            content = msg['content'][:500] + "..." if len(msg['content']) > 500 else msg['content']
-            print(f"\n{role} MESSAGE:")
-            print("-" * 40)
-            print(content)
-        
-        print("="*80)
-        print("END DEBUG PROMPT")
-        print("="*80)
-
 

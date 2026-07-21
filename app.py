@@ -43,43 +43,8 @@ logging.basicConfig(
 )
 logger = logging.getLogger("lowes_rag_app")
 
-# ---- DANGEROUS: disables TLS verification in this process ----
-import os, ssl, warnings
-
-# Remove CA bundle env vars so they don't interfere with verify=False
-for var in ("REQUESTS_CA_BUNDLE", "CURL_CA_BUNDLE", "SSL_CERT_FILE"):
-    os.environ.pop(var, None)
-
-# If you rely on HF Hub offline/cached models, keep these if you like:
-os.environ.setdefault("HF_HUB_DISABLE_SSL_VERIFICATION", "1")
-os.environ.setdefault("TRANSFORMERS_OFFLINE", "1")
-
-# Disable urllib3/requests warnings and verification
-from urllib3.exceptions import InsecureRequestWarning
-warnings.simplefilter("ignore", InsecureRequestWarning)
-ssl._create_default_https_context = ssl._create_unverified_context
-
-# Patch requests to default to verify=False
-import requests
-_old_request = requests.Session.request
-def _request(self, method, url, **kwargs):
-    kwargs.setdefault("verify", False)
-    return _old_request(self, method, url, **kwargs)
-requests.Session.request = _request
-
-# If any lib uses httpx, disable there too
-try:
-    import httpx
-    _old_httpx_init = httpx.Client.__init__
-    def _httpx_init(self, *args, **kwargs):
-        kwargs.setdefault("verify", False)
-        return _old_httpx_init(self, *args, **kwargs)
-    httpx.Client.__init__ = _httpx_init
-except Exception:
-    pass
-
-print("WARNING: SSL certificate verification DISABLED for this process")
-# ---- end dangerous block ----
+# TLS verification uses the Python/requests defaults. For an internal CA,
+# configure REQUESTS_CA_BUNDLE or SSL_CERT_FILE instead of disabling checks.
 
 # =======================================
 # Auth + Chat Client for Lowes B2B API
@@ -117,11 +82,11 @@ class LowesAuthClient:
         }
         resp = self._session.post(self.token_url, headers=headers, data=data, timeout=self.timeout)
         if resp.status_code != 200:
-            msg = f"Failed to obtain token: HTTP {resp.status_code} - {resp.text}"
+            msg = f"Failed to obtain token: HTTP {resp.status_code}"
             raise RuntimeError(msg)
         body = resp.json()
         if "access_token" not in body:
-            raise RuntimeError(f"Token response missing access_token: {body}")
+            raise RuntimeError("Token response missing access_token")
         self._token = body["access_token"]
         expires_in = int(body.get("expires_in", 900))
         self._expiry = now + expires_in
@@ -174,7 +139,7 @@ class LowesAIClient:
         try:
             data = resp.json()
         except Exception:
-            data = {"error": {"message": f"Non-JSON response: {resp.text}", "http_status": resp.status_code}}
+            data = {"error": {"message": "Non-JSON response", "http_status": resp.status_code}}
 
         # Surface HTTP & API errors coherently
         if resp.status_code >= 400 or "error" in data:
@@ -182,8 +147,9 @@ class LowesAIClient:
             if "error" in data:
                 err = data["error"]
             else:
-                err = {"message": f"HTTP {resp.status_code}: {resp.text}"}
-            raise RuntimeError(f"Chat API error: {json.dumps(err, ensure_ascii=False)}")
+                err = {"message": f"HTTP {resp.status_code}"}
+            error_message = err.get("message", "provider error") if isinstance(err, dict) else "provider error"
+            raise RuntimeError(f"Chat API error: {error_message}")
 
         return data
 

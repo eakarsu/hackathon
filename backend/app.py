@@ -1,40 +1,5 @@
-# ---- DANGEROUS: disables TLS verification in this process ----
-import os, ssl, warnings
-
-# Remove CA bundle env vars so they don't interfere with verify=False
-for var in ("REQUESTS_CA_BUNDLE", "CURL_CA_BUNDLE", "SSL_CERT_FILE"):
-    os.environ.pop(var, None)
-
-# If you rely on HF Hub offline/cached models, keep these if you like:
-os.environ.setdefault("HF_HUB_DISABLE_SSL_VERIFICATION", "1")
-os.environ.setdefault("TRANSFORMERS_OFFLINE", "1")
-
-# Disable urllib3/requests warnings and verification
-from urllib3.exceptions import InsecureRequestWarning
-warnings.simplefilter("ignore", InsecureRequestWarning)
-ssl._create_default_https_context = ssl._create_unverified_context
-
-# Patch requests to default to verify=False
-import requests
-_old_request = requests.Session.request
-def _request(self, method, url, **kwargs):
-    kwargs.setdefault("verify", False)
-    return _old_request(self, method, url, **kwargs)
-requests.Session.request = _request
-
-# If any lib uses httpx, disable there too
-try:
-    import httpx
-    _old_httpx_init = httpx.Client.__init__
-    def _httpx_init(self, *args, **kwargs):
-        kwargs.setdefault("verify", False)
-        return _old_httpx_init(self, *args, **kwargs)
-    httpx.Client.__init__ = _httpx_init
-except Exception:
-    pass
-
-print("WARNING: SSL certificate verification DISABLED for this process")
-# ---- end dangerous block ----
+# TLS verification uses the Python/requests defaults. For an internal CA,
+# configure REQUESTS_CA_BUNDLE or SSL_CERT_FILE instead of disabling checks.
 
 from flask import Flask, request, jsonify
 from flask_cors import CORS
@@ -46,6 +11,7 @@ import json
 from datetime import datetime
 import re
 import logging
+from pathlib import Path
 
 # Add parent directory to path to import RAG modules
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
@@ -81,12 +47,38 @@ logger = logging.getLogger(__name__)
 load_dotenv()
 
 app = Flask(__name__)
-# Very permissive CORS for development
-CORS(app, 
-     origins=["*"],  # Allow all origins for development
-     methods=['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
-     allow_headers=['Content-Type', 'Authorization', 'Accept', 'Origin', 'X-Requested-With'],
-     supports_credentials=False)  # Can't use credentials with wildcard origins
+app.config['MAX_CONTENT_LENGTH'] = 1 * 1024 * 1024
+allowed_origins = [
+    origin.strip()
+    for origin in os.getenv('CORS_ORIGINS', 'http://localhost:3000').split(',')
+    if origin.strip()
+]
+CORS(
+    app,
+    origins=allowed_origins,
+    methods=['GET', 'POST', 'OPTIONS'],
+    allow_headers=['Content-Type', 'Authorization'],
+    supports_credentials=False,
+)
+
+DATA_ROOT = Path(
+    os.getenv('DATA_ROOT', Path(__file__).resolve().parent.parent)
+).expanduser().resolve()
+
+
+def resolve_data_file(value: str, expected_suffix: str) -> Path:
+    """Resolve a request-supplied data file within the configured data root."""
+    candidate = Path(value)
+    if not candidate.is_absolute():
+        candidate = DATA_ROOT / candidate
+    candidate = candidate.expanduser().resolve()
+    try:
+        candidate.relative_to(DATA_ROOT)
+    except ValueError as exc:
+        raise ValueError('Data path must stay inside DATA_ROOT') from exc
+    if candidate.suffix.lower() != expected_suffix:
+        raise ValueError(f'Data file must use the {expected_suffix} extension')
+    return candidate
 
 class RAGService:
     def __init__(self):
@@ -108,10 +100,10 @@ class RAGService:
         
         if self.rag_available:
             # Check if AI credentials are configured
-            self.client_id = os.getenv('AI_CLIENT_ID', '5f218d4cf51460009a432438b2ba70b5')
-            self.client_secret = os.getenv('AI_CLIENT_SECRET', '2309d9fa6f965a88c30dd809619f30c1')
-            self.token_url = os.getenv('AI_TOKEN_URL', 'https://apis-b2b-stage.lowes.com/v1/oauthprovider/oauth2/token')
-            self.chat_url = os.getenv('AI_CHAT_URL', 'https://apis-b2b-stage.lowes.com/v1/chat/completions')
+            self.client_id = os.getenv('AI_CLIENT_ID')
+            self.client_secret = os.getenv('AI_CLIENT_SECRET')
+            self.token_url = os.getenv('AI_TOKEN_URL')
+            self.chat_url = os.getenv('AI_CHAT_URL')
             self.model = os.getenv('AI_MODEL', 'gpt-4o')
             # Use absolute path for ChromaDB to avoid permission issues
             # Check if data exists in project root first (where indexing might have occurred)
@@ -140,8 +132,9 @@ class RAGService:
             except Exception as e:
                 logger.warning(f"Could not fix permissions: {e}")
             
-            # Check if RAG was previously initialized
-            self._check_existing_initialization()
+            # Restore persisted state only when the external client is configured.
+            if all([self.client_id, self.client_secret, self.token_url, self.chat_url]):
+                self._check_existing_initialization()
         
     def _check_existing_initialization(self):
         """Check if RAG system was previously initialized by looking for ChromaDB data"""
@@ -203,6 +196,12 @@ class RAGService:
         """Initialize RAG components"""
         if not self.rag_available:
             return {"status": "rag_not_available", "error": "RAG dependencies not installed"}
+
+        if not all([self.client_id, self.client_secret, self.token_url, self.chat_url]):
+            return {
+                "status": "configuration_error",
+                "error": "AI client credentials and endpoints must be configured",
+            }
             
         if self.is_initialized:
             return {"status": "already_initialized"}
@@ -735,27 +734,11 @@ def test():
 
 @app.route('/api/reset-db', methods=['POST'])
 def reset_database():
-    """Reset ChromaDB database"""
-    try:
-        import shutil
-        if os.path.exists('./chromadb_store'):
-            shutil.rmtree('./chromadb_store')
-        os.makedirs('./chromadb_store', mode=0o755, exist_ok=True)
-        
-        # Reset RAG service
-        global rag_service
-        rag_service.is_initialized = False
-        rag_service.vector_store = None
-        
-        return jsonify({
-            "success": True,
-            "message": "Database reset successfully"
-        })
-    except Exception as e:
-        return jsonify({
-            "success": False,
-            "error": str(e)
-        }), 500
+    """Destructive resets are intentionally unavailable over HTTP."""
+    return jsonify({
+        "success": False,
+        "error": "Database reset is disabled; use an owner-approved offline maintenance procedure",
+    }), 403
 
 @app.route('/api/health', methods=['GET'])
 def health_check():
@@ -791,18 +774,18 @@ def index_data():
     """Index data into vector store"""
     try:
         data = request.json or {}
-        json_path = data.get('json_path', 'lead_data.json')
-        rules_path = data.get('rules_path', 'lead_intelligence.txt')
-        json_limit = data.get('json_limit', 4000)
+        json_path = resolve_data_file(data.get('json_path', 'lead_data.json'), '.json')
+        rules_path = resolve_data_file(data.get('rules_path', 'lead_intelligence.txt'), '.txt')
+        json_limit = max(1, min(int(data.get('json_limit', 4000)), 10000))
         
         # Check if files exist
-        if not os.path.exists(json_path):
+        if not json_path.is_file():
             return jsonify({
                 "success": False,
                 "error": f"JSON file not found: {json_path}"
             }), 404
         
-        if not os.path.exists(rules_path):
+        if not rules_path.is_file():
             return jsonify({
                 "success": False,
                 "error": f"Rules file not found: {rules_path}"
@@ -826,15 +809,15 @@ def index_data():
 def search():
     """Search indexed data and get AI response"""
     try:
-        data = request.json
+        data = request.json or {}
         query = data.get('query')
-        rules_path = data.get('rules_path', 'lead_intelligence.txt')
-        top_k = data.get('top_k', 300)
+        rules_path = resolve_data_file(data.get('rules_path', 'lead_intelligence.txt'), '.txt')
+        top_k = max(1, min(int(data.get('top_k', 50)), 100))
         
-        if not query:
+        if not isinstance(query, str) or not query.strip() or len(query) > 4000:
             return jsonify({
                 "success": False,
-                "error": "Query is required"
+            "error": "Query must be a non-empty string of at most 4000 characters"
             }), 400
         
         # Perform search
@@ -874,18 +857,21 @@ def chat():
             }), 400
         
         message = data['message']
-        rules_path = data.get('rules_path', 'lead_intelligence.txt')
+        if not isinstance(message, str) or not message.strip() or len(message) > 4000:
+            return jsonify({"error": "Message must be a non-empty string of at most 4000 characters"}), 400
+        rules_path = resolve_data_file(data.get('rules_path', 'lead_intelligence.txt'), '.txt')
         
         # Check if system is initialized
         if not rag_service.is_initialized:
             # Try to auto-initialize with default data
             try:
                 rag_service.initialize()
-                # Auto-index if data files exist
-                if os.path.exists('lead_data.json') and os.path.exists('lead_intelligence.txt'):
-                    rag_service.index_data('lead_data.json', 'lead_intelligence.txt')
-            except:
-                pass
+                default_json = resolve_data_file('lead_data.json', '.json')
+                default_rules = resolve_data_file('lead_intelligence.txt', '.txt')
+                if default_json.is_file() and default_rules.is_file():
+                    rag_service.index_data(default_json, default_rules)
+            except Exception as error:
+                logger.warning('RAG auto-initialization failed: %s', error)
         
         # Perform RAG search
         if rag_service.is_initialized:
@@ -907,73 +893,17 @@ def chat():
                 }
             })
         else:
-            # Fallback to mock response if RAG not initialized
-            mock_data = get_mock_response(message)
-            
-            # Store mock items for analytics too
-            rag_service.add_actionable_items(mock_data['actionable_items'], message)
-            
             return jsonify({
-                "success": True,
-                "data": mock_data
-            })
+                "success": False,
+                "error": "RAG service is not initialized"
+            }), 503
     
     except Exception as e:
         logger.error(f"Chat error: {e}")
-        # Fallback to mock response on error
         return jsonify({
-            "success": True,
-            "data": get_mock_response(data.get('message', ''))
-        })
-
-def get_mock_response(query: str) -> Dict[str, Any]:
-    """Return mock responses for testing"""
-    mock_responses = {
-        "default": {
-            "actionable_items": [
-                {
-                    "id": "1",
-                    "title": "Review Customer Leads",
-                    "description": "Review and prioritize customer leads for painting and plumbing services",
-                    "priority": "high",
-                    "category": "Lead Management",
-                    "estimated_time": "2 hours",
-                    "impact": "Increase revenue potential"
-                },
-                {
-                    "id": "2", 
-                    "title": "Update Lead Status",
-                    "description": "Update status for overdue leads and schedule follow-ups",
-                    "priority": "medium",
-                    "category": "Operations",
-                    "estimated_time": "1 hour",
-                    "impact": "Improve customer satisfaction"
-                }
-            ],
-            "summary": "Based on your query, here are the recommended actions for store employees.",
-            "timestamp": datetime.now().isoformat()
-        }
-    }
-    
-    query_lower = query.lower()
-    if "store" in query_lower and any(num in query_lower for num in ['6338', '1234', '5678']):
-        return {
-            "actionable_items": [
-                {
-                    "id": "1",
-                    "title": f"Priority Leads for Store {[num for num in ['6338', '1234', '5678'] if num in query_lower][0]}",
-                    "description": f"Focus on overdue painting and plumbing leads for your store",
-                    "priority": "high",
-                    "category": "Lead Management",
-                    "estimated_time": "3 hours",
-                    "impact": "Increase revenue potential"
-                }
-            ],
-            "summary": f"Store-specific actionable items for immediate attention.",
-            "timestamp": datetime.now().isoformat()
-        }
-    
-    return mock_responses["default"]
+            "success": False,
+            "error": "Chat request failed"
+        }), 502
 
 @app.route('/api/actionable-items', methods=['GET'])
 def get_actionable_items():
@@ -1047,27 +977,12 @@ def complete_actionable_item(item_id):
 
 @app.route('/api/actionable-items/<item_id>/execute', methods=['POST'])
 def execute_actionable_item(item_id):
-    """Execute/implement an actionable item"""
-    try:
-        result = rag_service.execute_task(item_id)
-        
-        if result.get('success'):
-            return jsonify({
-                "success": True,
-                "message": f"Task {item_id} executed successfully",
-                "data": result
-            })
-        else:
-            return jsonify({
-                "success": False,
-                "error": result.get('error', 'Unknown error')
-            }), 404
-    
-    except Exception as e:
-        return jsonify({
-            "success": False,
-            "error": str(e)
-        }), 500
+    """This prototype does not execute external work."""
+    return jsonify({
+        "success": False,
+        "error": "Task execution is simulation-only and is disabled",
+        "item_id": item_id,
+    }), 409
 
 @app.route('/api/analytics', methods=['GET'])
 def get_analytics():
@@ -1087,4 +1002,8 @@ def get_analytics():
         }), 500
 
 if __name__ == '__main__':
-    app.run(debug=True, host='0.0.0.0', port=5001)
+    app.run(
+        debug=os.getenv('FLASK_DEBUG', '').lower() == 'true',
+        host=os.getenv('FLASK_HOST', '127.0.0.1'),
+        port=int(os.getenv('PORT', '5001')),
+    )
