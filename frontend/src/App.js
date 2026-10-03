@@ -211,7 +211,7 @@ function App() {
         )}
       </header>
 
-      <nav className="tab-navigation">
+      <aside className="tab-navigation" aria-label="Application navigation">
         <button 
           className={activeTab === 'chat' ? 'tab active' : 'tab'}
           onClick={() => setActiveTab('chat')}
@@ -230,7 +230,7 @@ function App() {
         >
           Analytics
         </button>
-      </nav>
+      </aside>
 
       <main className="main-content">
         {error && (
