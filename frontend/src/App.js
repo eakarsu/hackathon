@@ -211,7 +211,7 @@ function App() {
         )}
       </header>
 
-      <aside className="tab-navigation" aria-label="Application navigation">
+      <aside className="tab-navigation" aria-label="Application navigation">{process.env.REACT_APP_NATIVE_AI_WORKSPACE_URL && <a href={process.env.REACT_APP_NATIVE_AI_WORKSPACE_URL} target="_blank" rel="noopener" className="sidebar-link">AI workspace</a>}
         <button 
           className={activeTab === 'chat' ? 'tab active' : 'tab'}
           onClick={() => setActiveTab('chat')}

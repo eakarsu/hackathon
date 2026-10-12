@@ -19,6 +19,8 @@ for assigned_port in "$BACKEND_PORT" "$FRONTEND_PORT";do [[ "$assigned_port" =~ 
 [ -d "$PROJECT_DIR/frontend/node_modules" ]&&[ -d "$PROJECT_DIR/runtime" ]||{ echo "Runtime dependencies are missing" >&2;exit 1; }
 export RUNTIME_PROJECT_NAME=hackathon RUNTIME_AI_ENDPOINT=/api/ai/rag-knowledge-review RUNTIME_AI_FEATURE=rag-knowledge-review
 export RUNTIME_AI_SYSTEM_PROMPT='You are a governed retrieval assistant. Produce a concise evidence-aware answer, distinguish retrieved evidence from inference, flag missing sources, and require human review for consequential use.'
+echo "AI workspace: http://127.0.0.1:$BACKEND_PORT/ai-workspace"
+export VITE_NATIVE_AI_WORKSPACE_URL="http://127.0.0.1:$BACKEND_PORT/ai-workspace" REACT_APP_NATIVE_AI_WORKSPACE_URL="http://127.0.0.1:$BACKEND_PORT/ai-workspace"
 node "$PROJECT_DIR/runtime/setup.mjs"
 CHILD_PIDS=()
 (cd "$PROJECT_DIR"&&exec node runtime/api.mjs)&CHILD_PIDS+=("$!")
